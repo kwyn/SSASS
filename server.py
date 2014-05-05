@@ -5,29 +5,30 @@ from flask import Flask
 from flask.ext.restful import reqparse, abort, Api, Resource
 from gensim import utils
 from simserver import SessionServer
-import os
+import os, shutil
 import logging
+
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
 
 app = Flask(__name__)
 api = Api(app)
 
 
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-
 ########################################################################  
 #Define Local Variables
 ########################################################################  
 
-corpuses = {
-    'todo1': {'task': 'build an API'},
-    'todo2': {'task': '?????'},
-    'todo3': {'task': 'profit!'},
-}
+corpuses = dict()
 documents = dict()
 
 ########################################################################  
 #Define Helper functions
-########################################################################  
+########################################################################
+
+parser = reqparse.RequestParser()
+parser.add_argument('corpus_name', type=str, help='name of target corpus')
+parser.add_argument('document_body', type=str, help='body of document to be parsed')
+parser.add_argument('document_id', type=str, help="the document's id :P")
 
 def abort_if_corpus_doesnt_exist(corpus_name):
   if corpus_name not in corpuses:
@@ -43,8 +44,27 @@ def get_service():
     os.mkdir(SERVER_DIR)
   except:
     pass
+  service = SessionServer(SERVER_DIR)
+  service.set_autosession()
+  return service
 
-  return SessionServer(SERVER_DIR)
+def add_document(corpus_name, document):
+  service = get_service()
+  if corpus_name not in corpuses:
+    corpuses[corpus_name] = list()
+  corpus = corpuses[corpus_name]
+  doc_id = 'doc_%s' % len(corpus)
+  doc = dict()
+  tokens = utils.simple_preprocess(document)
+  doc = {'id': doc_id, 'tokens': tokens }
+  corpus.append(doc)
+  return doc_id
+
+def find_similar(doc_id):
+  service = get_service()
+  service.train(corpuses['__default__'])
+  service.index(corpuses['__default__'])
+  return service.find_similar(doc_id)
 
 ########################################################################  
 #Define Handlers
@@ -52,60 +72,41 @@ def get_service():
 
 class Corpus(Resource):
   def get(self, corpus_name):
-    # abort_if_corpus_doesnt_exist(corpus_name)
-    return corpuses
+    abort_if_corpus_doesnt_exist(corpus_name)
+    return corpuses[corpus_name]
+  def post(self):
+    args = parser.parse_args()
+    if 'corpus' not in args:
+      args['corpus'] = "__default__"
+    document_id = add_document(args['corpus'],args['document_body'])
+    return document_id
 
 class Documents(Resource):
   def get(self, document_id):
     abort_if_document_doesnt_exist(document_id)
     return documents
 
+class Search(Resource):
+  def get(self):
+    args = parser.parse_args()
+    service = get_service()
+    print args.keys()
+    doc_id = args['document_id']
+    return find_similar(doc_id)
+
 
 ########################################################################  
 #Define endpoints
 ########################################################################  
 
-api.add_resource(Corpus, '/corpus')
+api.add_resource(Corpus, '/corpus', '/corpus/<string:corpus_name>')
 api.add_resource(Documents, '/documents')
-# api.add_recource(Search)
-
-def get_corpus():
-  queries = ['meditation', 'big sur', 'vipassana', 'osho', 'krishna', 'compilers', 'mpfc', 'triune brain', 'javascript', 'http', 'burning man']
-  titles = [wikipedia.search(q) for q in queries]
-  pages = []
-  for title in titles:
-    try:
-      pages.append(wikipedia.summary(title))
-    except wikipedia.exceptions.DisambiguationError:
-      print 'Skipping ambiguous page title: %s' % title
-
-  return [{'id': 'doc_%s' % num, 'tokens': utils.simple_preprocess(text)} for num, text in enumerate(pages)]
-
-
-
-
-# @app.route('/')
-# def setup():
-#   corpus = get_corpus()
-#   service = get_service()
-#   service.train(corpus, method='lsi')
-#   service.index(corpus)
-#   return "setup complete"
-
+api.add_resource(Search, '/search')
 # @app.route('getsim/<documentID>')
 # def get_sim(documentID):
 #   find_similar(documentID)
 
 
-# @app.route('/reindex')
-# def reindex():
-#   try:
-#     corpus
-#   except:
-#     return "no corpus defined yet"
-#   else:
-#     service.index(corpus)
-#     return "Reindexed!"
 
 if __name__ == "__main__":
   app.run(host="0.0.0.0")
