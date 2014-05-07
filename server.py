@@ -34,7 +34,7 @@ def abort_if_corpus_doesnt_exist(corpus_name):
     abort(404, message="Corpus {} doesn't exist".format(corpus_name))
 
 def abort_if_document_doesnt_exist(document_id):
-  if document_id not in documets:
+  if document_id not in documents:
     abort(404, message="Document {} doesn't exit".format(document_id))
 
 def get_service():
@@ -84,7 +84,7 @@ class Corpus(Resource):
 class Documents(Resource):
   def get(self, document_id):
     abort_if_document_doesnt_exist(document_id)
-    return jsonify({'results' : documents(document_id)})
+    return jsonify({'results' : documents[document_id]})
 
 class Search(Resource):
   def get(self):

@@ -21,13 +21,16 @@ def make_requests(pages):
  	results = list()
  	for page in pages:
 		parameters = { 'document_body':  page }
- 		r = requests.post('http://172.12.8.150/corpus', params=parameters)
+ 		r = requests.post('http://ssaas-1-harleykwyn.beta.tutum.io:49315/corpus', params=parameters)
  		results.append((r.text))
  		print r.text
  	parameters = { 'document_id': 'doc_1' }
- 	r = requests.get('http://172.12.8.150/search', params=parameters)
+ 	r = requests.get('http://ssaas-1-harleykwyn.beta.tutum.io:49315/search', params=parameters)
  	results.append((r.text, parameters))
  	return results
 
 corpus = get_corpus()
 print make_requests(corpus)
+r = requests.get('http://ssaas-1-harleykwyn.beta.tutum.io:49315/documents/doc_1')
+print r.text
+
