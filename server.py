@@ -1,7 +1,6 @@
 #! /usr/local/bin/python
 
-import wikipedia
-from flask import Flask
+from flask import Flask, jsonify
 from flask.ext.restful import reqparse, abort, Api, Resource
 from gensim import utils
 from simserver import SessionServer
@@ -56,7 +55,8 @@ def add_document(corpus_name, document):
   doc_id = 'doc_%s' % len(corpus)
   doc = dict()
   tokens = utils.simple_preprocess(document)
-  doc = {'id': doc_id, 'tokens': tokens }
+  doc = {'id': doc_id, 'tokens': tokens , 'body':document}
+  documents[doc_id] = doc
   corpus.append(doc)
   return doc_id
 
@@ -79,12 +79,12 @@ class Corpus(Resource):
     if 'corpus' not in args:
       args['corpus'] = "__default__"
     document_id = add_document(args['corpus'],args['document_body'])
-    return document_id
+    return jsonify({'results' : document_id })
 
 class Documents(Resource):
   def get(self, document_id):
     abort_if_document_doesnt_exist(document_id)
-    return documents
+    return jsonify({'results' : documents(document_id)})
 
 class Search(Resource):
   def get(self):
@@ -92,7 +92,7 @@ class Search(Resource):
     service = get_service()
     print args.keys()
     doc_id = args['document_id']
-    return find_similar(doc_id)
+    return jsonify({ 'results': find_similar(doc_id) })
 
 
 ########################################################################  
@@ -100,12 +100,8 @@ class Search(Resource):
 ########################################################################  
 
 api.add_resource(Corpus, '/corpus', '/corpus/<string:corpus_name>')
-api.add_resource(Documents, '/documents')
+api.add_resource(Documents, '/documents/<string:document_id>')
 api.add_resource(Search, '/search')
-# @app.route('getsim/<documentID>')
-# def get_sim(documentID):
-#   find_similar(documentID)
-
 
 
 if __name__ == "__main__":

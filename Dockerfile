@@ -36,9 +36,6 @@ RUN easy_install Pyro4
 #Install gensim
 RUN easy_install -U simserver
 
-#Install wikipedia
-RUN pip install wikipedia
-
 ################## END INSTALLATION ########################
 
 ################## CREATE VOLUMES ##########################
