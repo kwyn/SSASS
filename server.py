@@ -7,7 +7,7 @@ from simserver import SessionServer
 import os, shutil
 import logging
 
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 app = Flask(__name__)
 api = Api(app)
@@ -73,7 +73,9 @@ class Corpus(Resource):
     return jsonify({ 'doc_id' : document_id, 'body': args['document_body'] })
 
 class Documents(Resource):
-  def get(self, document_id):
+  def get(self):
+    args = parser.parse_args()
+    document_id = args['document_id']
     abort_if_document_doesnt_exist(document_id)
     return jsonify({'results' : documents[document_id]})
 
